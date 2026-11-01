@@ -1480,7 +1480,7 @@ export class CarScene {
     this._tracks(dt);
     this.cutaway.update(dt, this.clock);
     this._driveModel();
-    this.navArrow.update(toScene, this.clock);
+    this.navArrow.update(toScene, this.clock, this.route.mesh.visible);
     this.renderer.render(this.scene, this.camera);
     this._labels();   // after render: the camera's matrices are this frame's
   }
