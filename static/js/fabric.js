@@ -97,6 +97,7 @@ void main() {
 
 const FRAG = `
 #define RIDGE_MAX ${RIDGE_MAX}
+#define OBJ_MAX ${OBJ_MAX}
 uniform mat4 uGroundInv;
 uniform vec2 uRidgeD[RIDGE_MAX];
 uniform vec4 uRidgeC[RIDGE_MAX];   // each ridge's line: color (linear), dashed (1) or solid (0); black = no line
@@ -111,6 +112,27 @@ varying vec2 vCar;
 varying vec2 vSD;
 varying float vMask;
 varying float vLift;
+uniform vec4 uObj[OBJ_MAX];
+uniform vec4 uObjS[OBJ_MAX];
+uniform float uObjT[OBJ_MAX];      // each car's tail lights (0 off, 1 on: a car ahead, facing away)
+uniform int uObjN;
+uniform vec3 uTailC;
+// the tail lights under the cloth: a band across each car's back, a lamp at each corner brighter
+float tailLight(vec2 p) {
+  float t = 0.0;
+  for (int i = 0; i < OBJ_MAX; i++) {
+    if (i >= uObjN) break;
+    if (uObjT[i] <= 0.0) continue;
+    vec2 q = p - uObj[i].xy;
+    q = vec2(dot(q, uObj[i].zw), q.y * uObj[i].z - q.x * uObj[i].w);
+    float back = (q.x + uObjS[i].x + 0.1) / 0.22, side = abs(q.y) / max(0.3, uObjS[i].y);
+    float along = exp(-back * back);
+    float band = 1.0 - smoothstep(0.7, 0.95, side);
+    float lamps = exp(-pow((side - 0.74) / 0.14, 2.0));
+    t = max(t, uObjT[i] * uObjS[i].z * along * (0.35 * band + lamps));
+  }
+  return t;
+}
 void main() {
   vec3 n = normalize(cross(dFdx(vWorld), dFdy(vWorld)));
   if (n.y < 0.0) n = -n;
@@ -154,6 +176,8 @@ void main() {
   float wave = pow(0.5 + 0.5 * cos(lr * 6.2832 / 0.85 - uTime * 4.0), 5.0);
   float env = smoothstep(0.25, 0.8, lr) * (1.0 - smoothstep(1.4, 3.0, lr));
   glow += uLeadC * uLead.z * env * wave * (0.35 + 0.65 * through) * (uDark > 0.5 ? 1.0 : 1.6);
+  // tail lights shining dimly through the cloth: mostly out of the perforations, a faint wash on the weave
+  glow += uTailC * tailLight(vCar) * (0.12 + 0.88 * through) * (uDark > 0.5 ? 0.9 : 1.2);
   float gi = max(glow.r, max(glow.g, glow.b));
   if (uDark > 0.5) col += glow * 1.6;
   else col = mix(col, glow / max(gi, 1e-4), min(1.0, gi) * 0.92);
@@ -183,7 +207,9 @@ export class Fabric {
       uRidgeN: { value: 0 },
       uObj: { value: Array.from({ length: OBJ_MAX }, () => new THREE.Vector4()) },
       uObjS: { value: Array.from({ length: OBJ_MAX }, () => new THREE.Vector4()) },
+      uObjT: { value: new Float32Array(OBJ_MAX) },
       uObjN: { value: 0 },
+      uTailC: { value: new THREE.Color(0xff2a14) },
       uBase: { value: new THREE.Color() }, uHole: { value: new THREE.Color() }, uFog: { value: new THREE.Color() },
       uLight: { value: new THREE.Vector3(-0.55, 0.55, -0.65).normalize() },
       uFogR: { value: new THREE.Vector2(60, 170) },
@@ -196,15 +222,8 @@ export class Fabric {
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = -1;
     this.mesh.visible = false;
-    // the glowing bar across the rear of each car ahead
-    const barMat = new THREE.MeshBasicMaterial({ color: 0xff2a1a, transparent: true, depthWrite: false, toneMapped: false });
-    this.bars = Array.from({ length: OBJ_MAX }, () => {
-      const m = new THREE.Mesh(new THREE.BoxGeometry(1, 0.07, 0.04), barMat.clone());
-      m.visible = false;
-      return m;
-    });
     this.group = new THREE.Group();
-    this.group.add(this.mesh, ...this.bars);
+    this.group.add(this.mesh);
     this.lead = { s: 0, color: new THREE.Color(CONCEPT_COLORS.green) };
     this.look = LOOK.light;
   }
@@ -259,18 +278,8 @@ export class Fabric {
       U.uObj.value[i].set(o.x, o.y, o.cos, o.sin);
       U.uObjS.value[i].set(o.hl, o.hw, o.alpha, o.hgt);
       if (o.lead && (!lead || o.x < lead.x)) lead = o;
-      // the rear bar: across the back of the car, at lamp height, facing us
-      const b = this.bars[i];
-      b.visible = o.ahead && o.alpha > 0.05;
-      if (b.visible) {
-        const rx = o.x - o.cos * o.hl, ry = o.y - o.sin * o.hl;
-        b.position.set(-ry + o.sin * 0.28, 0.5 * o.hgt, -rx + o.cos * 0.28);   // on the cloth over the tailgate
-        b.rotation.y = Math.atan2(o.sin, o.cos);
-        b.scale.set(o.hw * 1.5, 1, 1);
-        b.material.opacity = o.alpha * (o.braking ? 1 : 0.75);
-      }
+      U.uObjT.value[i] = o.ahead ? (o.braking ? 1 : 0.7) : 0;
     }
-    for (let i = m; i < OBJ_MAX; i++) this.bars[i].visible = false;
     U.uObjN.value = m;
     // the ripples: green with a long gap, through yellow and orange, red when close; eased so they don't blink
     const L = this.lead;

@@ -870,7 +870,6 @@ export class CarScene {
     const on = this.concept;
     this.fabric.mesh.visible = on && this.settings.showGround !== false;
     if (!on) {
-      for (const b of this.fabric.bars) b.visible = false;
       for (const e of this.objects.values()) if (e.pivot) e.pivot.visible = true;
       return;
     }
