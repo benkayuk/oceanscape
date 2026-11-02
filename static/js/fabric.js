@@ -15,14 +15,13 @@ import { FIELD_GLSL } from './ground.js';
 export const RIDGE_MAX = 12;
 export const OBJ_MAX = 8;
 const RIDGE_H = 0.3;           // m: a lane line's ridge at weight 1
-const OBJ_BUMP = 0.42;         // m: how far a car's footprint lifts the sheet (its lower part is inside it)
 const PITCH = 0.085;           // m between perforations
 const DASH_P = 12, DASH_ON = 3;   // m: dash period and length (the classic dashes are 3 + 9)
 
 // the sheet's vertices: rows down the road (fine near the car, coarser far), columns across (fine over the road)
 function sheetGeometry() {
   const xs = [], ys = [];
-  for (let x = -45; x < 165;) { xs.push(x); x += x < 30 ? 0.3 : 0.3 + (x - 30) * 0.014; }
+  for (let x = -45; x < 165;) { xs.push(x); x += x < 55 ? 0.3 : 0.3 + (x - 55) * 0.016; }
   for (let y = 0; y < 160;) { ys.push(y); y += y < 12 ? 0.2 : 0.2 + (y - 12) * 0.025; }
   const yy = [...ys.slice(1).map(v => -v).reverse(), ...ys];
   const nx = xs.length, ny = yy.length;
@@ -50,7 +49,7 @@ uniform vec2 uRidgeD[RIDGE_MAX];   // each ridge: offset across the road (m, the
 uniform float uRidgeS[RIDGE_MAX];  // ...its half-width (m)
 uniform int uRidgeN;
 uniform vec4 uObj[OBJ_MAX];        // each car: center (car frame), heading (cos, sin)
-uniform vec4 uObjS[OBJ_MAX];       // ...half length, half width, lift (0..1), unused
+uniform vec4 uObjS[OBJ_MAX];       // ...half length, half width, shown (0..1), height (m)
 uniform int uObjN;
 varying vec3 vWorld;
 varying vec2 vCar;
@@ -58,6 +57,14 @@ varying vec2 vSD;
 varying float vMask;
 varying float vLift;
 ${FIELD_GLSL}
+float sdBox(vec2 q, vec2 b, float r) { vec2 e = abs(q) - b + r; return length(max(e, 0.0)) + min(max(e.x, e.y), 0.0) - r; }
+// A car under the sheet, as the fabric draped over it would show it: a rounded body to about half its height, the
+// cabin on it a little behind the middle, the cloth falling away from both in a soft skirt. q: along (forward), across.
+float carShape(vec2 q, vec2 hs, float hgt) {
+  float body = 1.0 - smoothstep(-0.5, 1.1, sdBox(q, hs - vec2(0.1, 0.05), 0.5));
+  float cabin = 1.0 - smoothstep(-0.6, 0.45, sdBox(q - vec2(-0.1 * hs.x, 0.0), vec2(0.62 * hs.x, 0.84 * hs.y), 0.55));
+  return hgt * (0.58 * body + 0.42 * cabin);
+}
 void main() {
   vec3 p = position;
   vec2 car = vec2(-p.z, -p.x);
@@ -76,11 +83,9 @@ void main() {
     if (i >= uObjN) break;
     vec2 q = car - uObj[i].xy;
     q = vec2(dot(q, uObj[i].zw), q.y * uObj[i].z - q.x * uObj[i].w);
-    vec2 e = abs(q) - uObjS[i].xy;
-    float od = length(max(e, 0.0)) + min(max(e.x, e.y), 0.0);
-    lift = max(lift, uObjS[i].z * (1.0 - smoothstep(-0.5, 1.8, od)));
+    lift = max(lift, uObjS[i].z * carShape(q, uObjS[i].xy, uObjS[i].w));
   }
-  p.y = h + lift * ${OBJ_BUMP.toFixed(3)} - 0.012;
+  p.y = max(h, lift) - 0.012;
   vec4 w = modelMatrix * vec4(p, 1.0);
   vWorld = w.xyz;
   vCar = car;
@@ -252,14 +257,14 @@ export class Fabric {
     for (let i = 0; i < m; i++) {
       const o = cars[i];
       U.uObj.value[i].set(o.x, o.y, o.cos, o.sin);
-      U.uObjS.value[i].set(o.hl, o.hw, o.alpha, 0);
+      U.uObjS.value[i].set(o.hl, o.hw, o.alpha, o.hgt);
       if (o.lead && (!lead || o.x < lead.x)) lead = o;
       // the rear bar: across the back of the car, at lamp height, facing us
       const b = this.bars[i];
       b.visible = o.ahead && o.alpha > 0.05;
       if (b.visible) {
         const rx = o.x - o.cos * o.hl, ry = o.y - o.sin * o.hl;
-        b.position.set(-ry + o.sin * 0.03, 0.78 * o.hgt, -rx + o.cos * 0.03);
+        b.position.set(-ry + o.sin * 0.28, 0.5 * o.hgt, -rx + o.cos * 0.28);   // on the cloth over the tailgate
         b.rotation.y = Math.atan2(o.sin, o.cos);
         b.scale.set(o.hw * 1.5, 1, 1);
         b.material.opacity = o.alpha * (o.braking ? 1 : 0.75);

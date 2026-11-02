@@ -10,7 +10,7 @@ import { applyLamps } from './lamps.js';
 import { RoadModel, linePoints, modelXOffset } from './road.js';
 import { RoadFurniture } from './furniture.js';
 import { RoadField } from './ground.js';
-import { Fabric, CONCEPT_COLORS } from './fabric.js';
+import { Fabric, CONCEPT_COLORS, OBJ_MAX } from './fabric.js';
 import { PowerTrails, motorLoad } from './tracks.js';
 import { ObjectLabels } from './labels.js';
 import { Cutaway } from './cutaway.js';
@@ -869,7 +869,11 @@ export class CarScene {
   _fabric(dt) {
     const on = this.concept;
     this.fabric.mesh.visible = on && this.settings.showGround !== false;
-    if (!on) { for (const b of this.fabric.bars) b.visible = false; return; }
+    if (!on) {
+      for (const b of this.fabric.bars) b.visible = false;
+      for (const e of this.objects.values()) if (e.pivot) e.pivot.visible = true;
+      return;
+    }
     this.ground.visible = false;
     this.roadnet.group.visible = false;
     this.headBeam.visible = false;   // the concepts light the road with the lines alone
@@ -886,12 +890,14 @@ export class CarScene {
       const hl = Math.max(1.2, (sz.l || 4.6) / 2), hw = Math.max(0.5, (sz.w || 1.9) / 2), hgt = sz.hgt || 1.5;
       const x = -m[14], y = -m[12];
       if (x < -40 || x > 150) return;
-      cars.push({ x, y, cos, sin, hl, hw, hgt, alpha: Math.min(1, e.alpha), ahead: x > 2 && cos > 0.3, lead: !!e.lead,
+      cars.push({ pivot: e.pivot, x, y, cos, sin, hl, hw, hgt, alpha: Math.min(1, e.alpha), ahead: x > 2 && cos > 0.3, lead: !!e.lead,
         gapS: Math.max(0, x - hl) / v, braking: false });
     };
     for (const e of this.objects.values()) add(e);
     for (const e of this.worldObjs.values()) add(e);
     cars.sort((a, b) => Math.hypot(a.x, a.y) - Math.hypot(b.x, b.y));
+    // the cars the sheet takes are its shape over them, not models on top; any past that keep their model
+    cars.forEach((c, i) => { c.pivot.visible = i >= OBJ_MAX; });
     this.fabric.update(this.ridges || [], cars, this.odometer, this.clock, dt);
   }
 
