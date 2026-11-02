@@ -293,8 +293,9 @@ export class Infotainment {
       this.tfFill.style.width = `${(100 * left / this.tf.start).toFixed(1)}%`;   // drains to the turn
     }
     setText(this.tfDist, left != null ? fmtDist(left, p.dist && p.dist.unit) : '');
-    // 22 m ahead, 5.5 m right of the car, 1.6 m up: scene X = -y, Y up, Z = -x
-    const v = this.tf.p.set(5.5, 1.6, -22).project(scene.camera);
+    // low over the fabric beside the car, as the concepts have it: 7 m ahead, 6 m right, 0.4 m up (scene X = -y, Y up,
+    // Z = -x), clear of the road ahead, the cars on it and the route
+    const v = this.tf.p.set(6, 0.4, -7).project(scene.camera);
     const W = window.innerWidth, H = window.innerHeight;
     const x = Math.min(W - 120, Math.max(120, (v.x + 1) / 2 * W)), y = Math.min(H - 140, Math.max(140, (1 - v.y) / 2 * H));
     tfEl.style.transform = `translate(${x.toFixed(0)}px, ${y.toFixed(0)}px) translate(-50%, -50%)`;
