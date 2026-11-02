@@ -13,7 +13,7 @@
   try {
     var saved = JSON.parse(localStorage.getItem('webhud.settings') || '{}');
     var theme = saved.theme || 'auto';
-    document.documentElement.dataset.style = saved.style || 'concept';
+    document.documentElement.dataset.style = saved.style || 'original';
     var dark = theme === 'dark' || (theme !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';
     document.querySelector('meta[name=theme-color]').setAttribute('content', dark ? '#101216' : '#eceef1');

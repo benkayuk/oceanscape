@@ -56,7 +56,7 @@ holds still when it isn't. Lane lines, stop lines, crosswalks and the headlight 
 same field, so they grow, bend and dissolve with the road. Ground texture and inferred road can be
 turned off under *Display*.
 
-The *Concept* style (*Display → Style*, `static/js/fabric.js`) draws that ground instead as a sheet of
+The *Concept* style (*Display → Render style*, `static/js/fabric.js`) draws that ground instead as a sheet of
 perforated fabric, after Territory Studio's original ADAS concepts for the Ocean: one dense mesh in the car
 frame, displaced in its vertex shader by the same road field. Each lane boundary is a soft ridge at its offset
 across the field's reference (the cameras' anchor arc, or the map's centerline and its lane structure), with a

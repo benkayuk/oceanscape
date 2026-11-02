@@ -1,4 +1,4 @@
-// The "Concept" style (Display > Style): the road as a sheet of perforated fabric, after Territory Studio's
+// The "Concept" style (Display > Render style): the road as a sheet of perforated fabric, after Territory Studio's
 // original ADAS concepts for the Ocean (territorystudio.com/project/fiskerocean). Lanes are soft ridges pushed
 // up through the sheet with the lane lines glowing along them, the cars around ours emerge from it as draped
 // shapes, and the car we follow sends ripples across the fabric in front of us, green to red with the gap.

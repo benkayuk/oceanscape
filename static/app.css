@@ -563,7 +563,7 @@ pre.diag { margin: 8px 0 0; max-height: 46vh; overflow: auto; padding: 10px 12px
   font: 11.5px/1.45 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; -webkit-user-select: text; }
 pre.diag:empty { display: none; }
 
-/* ---------- Concept style (Display > Style, fabric.js) ----------
+/* ---------- Concept style (Display > Render style, fabric.js) ----------
    After Territory Studio's Ocean concepts: the read-outs float on the fabric with no cards, in a light
    geometric sans, the hierarchy in size and grey; the next turn is an icon over a short line of text. */
 @font-face { font-family: "Concept Sans"; src: url("/comma/Inter-Regular.ttf") format("truetype"); font-weight: 400; font-display: swap; }

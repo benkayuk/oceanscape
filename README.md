@@ -24,6 +24,8 @@ and openpilot, and the app manages it over SSH.
 
 - **Driving view:** speed, gear, ACC/MADS state, speed limit, alerts, lane lines, tracked objects,
   parking sensors, traffic lights, signs, stop lines and crosswalks.
+- **Render style:** *Original*, the flat road and lines, or *Concept*, the road as a sheet of perforated fabric with
+  the lanes as glowing ridges and the cars as shapes under it, after Territory Studio's Ocean ADAS concepts (*Display*).
 - **World model:** fuses radar, ADAS camera and openpilot leads with per-sensor calibration and
   confidence (*Display → Objects*).
 - **Map road:** OpenStreetMap roads, junctions and street furniture around the car, matched to a
