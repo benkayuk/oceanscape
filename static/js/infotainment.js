@@ -290,7 +290,7 @@ export class Infotainment {
     const left = turn && turn.step === p.instruction ? Math.max(0, turn.at - scene.navArrow.road.odo) : p.dist ? p.dist.m : null;
     if (left != null) {
       this.tf.start = Math.max(this.tf.start, left, 50);
-      this.tfFill.style.width = `${(100 * (1 - left / this.tf.start)).toFixed(1)}%`;
+      this.tfFill.style.width = `${(100 * left / this.tf.start).toFixed(1)}%`;   // drains to the turn
     }
     setText(this.tfDist, left != null ? fmtDist(left, p.dist && p.dist.unit) : '');
     // 22 m ahead, 5.5 m right of the car, 1.6 m up: scene X = -y, Y up, Z = -x
