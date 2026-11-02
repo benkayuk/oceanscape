@@ -23,7 +23,7 @@ const STALE_MS = 6000;             // the comma streams at 20 Hz: this long with
 const COMMA_MS = 3000;             // the comma's stream counts as live this long after its last tick or snapshot
 const LOCAL_MS = 2500;             // the car's own view (10 Hz) counts as live this long after its last snapshot
 const DEFAULTS = {
-  theme: 'auto', units: 'auto', trafficSide: 'auto', cameraSignUnits: 'auto', laneSource: 'blend', egoPaint: OCEAN_PAINT_DEFAULT, egoWheels: OCEAN_WHEELS_DEFAULT, view: 'chase',
+  theme: 'auto', style: 'concept', units: 'auto', trafficSide: 'auto', cameraSignUnits: 'auto', laneSource: 'blend', egoPaint: OCEAN_PAINT_DEFAULT, egoWheels: OCEAN_WHEELS_DEFAULT, view: 'chase',
   showPath: true, showUss: true, showOpLeads: true, autoView: true, showGround: true, showRoad: true, showSigns: true,
   showTracks: true, showRadar: false, radarAllTracks: false, showLowConf: false, showObjectStats: false, objectMode: 'world',
   laneHeadingSign: 1, laneCurvatureSign: 1, objectHeadingSign: 1, laneConfThreshold: LANE_CONF_THRESHOLD,
@@ -149,7 +149,7 @@ class App {
   setSetting(key, value) {
     this.settings[key] = value;
     save('settings', this.settings);
-    if (key === 'theme') this.applyTheme();
+    if (key === 'theme' || key === 'style') this.applyTheme();
     if (key === 'egoPaint' || key === 'egoWheels') this.scene.setEgoLook(this.settings.egoPaint, this.settings.egoWheels);
     if (key === 'showRadar') this.updateRadarChip();
     if (key === 'showFps' || key === 'renderScale') this.meter.apply();
@@ -183,8 +183,9 @@ class App {
     const t = this.settings.theme;
     const dark = t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    document.documentElement.dataset.style = this.settings.style || 'classic';
     $('meta[name=theme-color]').setAttribute('content', dark ? '#101216' : '#eceef1');
-    this.scene.setTheme(dark);
+    this.scene.setTheme(dark, this.settings.style);
     // the Android app starts in this theme next time (its loading screen and background), see MainActivity
     try { window.WebHudApp?.setTheme(t); } catch { /* not in the app */ }
   }

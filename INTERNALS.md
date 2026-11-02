@@ -56,6 +56,17 @@ holds still when it isn't. Lane lines, stop lines, crosswalks and the headlight 
 same field, so they grow, bend and dissolve with the road. Ground texture and inferred road can be
 turned off under *Display*.
 
+The *Concept* style (*Display → Style*, `static/js/fabric.js`) draws that ground instead as a sheet of
+perforated fabric, after Territory Studio's original ADAS concepts for the Ocean: one dense mesh in the car
+frame, displaced in its vertex shader by the same road field. Each lane boundary is a soft ridge at its offset
+across the field's reference (the cameras' anchor arc, or the map's centerline and its lane structure), with a
+broad berm along each edge; the lane lines glow along the ridges out of the perforations (the ego lane's solid in
+amber, blue while steering, red for a departure; the others dimmer and dashed as marked), and replace the line
+ribbons and the map's road network. Cars lift the sheet where they stand, so they emerge from it, and show a red
+bar across their rear; the car we follow sends ripples across the fabric in front of it, green with a long gap
+through yellow and orange to red under a second. The perforations are fixed to the ground and averaged out where
+they'd be under a pixel apart. The HUD drops its cards for type floating on the sheet.
+
 Traffic lights, signs and road markings (`static/js/furniture.js`) come from the car's ADAS camera
 only; sunnypilot adds map speed limits (`liveMapDataSP`) but no signs or lights. The camera reports
 what it saw and, for lights and markings, how far ahead, never where across the road: the ego-lane

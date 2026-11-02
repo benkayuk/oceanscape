@@ -11,7 +11,9 @@
   // Day/night before the first paint: the last theme setting, read here so the page doesn't show light
   // while its scripts and the car model load (main.js applies it again, and tells the Android app).
   try {
-    var theme = (JSON.parse(localStorage.getItem('webhud.settings') || '{}').theme) || 'auto';
+    var saved = JSON.parse(localStorage.getItem('webhud.settings') || '{}');
+    var theme = saved.theme || 'auto';
+    document.documentElement.dataset.style = saved.style || 'concept';
     var dark = theme === 'dark' || (theme !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';
     document.querySelector('meta[name=theme-color]').setAttribute('content', dark ? '#101216' : '#eceef1');

@@ -10,6 +10,7 @@ import { applyLamps } from './lamps.js';
 import { RoadModel, linePoints, modelXOffset } from './road.js';
 import { RoadFurniture } from './furniture.js';
 import { RoadField } from './ground.js';
+import { Fabric, CONCEPT_COLORS } from './fabric.js';
 import { PowerTrails, motorLoad } from './tracks.js';
 import { ObjectLabels } from './labels.js';
 import { Cutaway } from './cutaway.js';
@@ -327,6 +328,10 @@ export class CarScene {
     this.ground.position.y = -0.01;
     this.world.add(this.ground);
     this.scene.add(this.world);
+    // the Concept style's ground instead (fabric.js): a perforated sheet in the car frame, ridged along the lanes
+    this.fabric = new Fabric(this.field);
+    this.scene.add(this.fabric.group);
+    this.concept = false;
     this.pose = { x: 0, y: 0, h: 0 };   // rear axle: m, m, rad; x forward / y left at h = 0
     // The map's own layers: the roads around the car (roadnet.js) and the signals, signs and crossings along them
     // (mapfeatures.js), ground-fixed in the pose frame, under a group that takes the same slide and turn the lane
@@ -448,10 +453,18 @@ export class CarScene {
   /** The nav app's next step (infotainment.js parseNav), or null: the route on the map follows it (routeview.js). */
   setNav(parsed) { this.route.setNav(parsed, this.road.odo); }
 
-  setTheme(dark) {
+  setTheme(dark, style = this.style) {
+    this.style = style;
+    this.concept = style === 'concept';
     this.theme = dark ? THEMES.dark : THEMES.light;
+    if (this.concept) {
+      // the Concept style (fabric.js): greys from its sheet, the background a gradient into its horizon
+      const L = this.fabric.setTheme(dark);
+      this.theme = { ...this.theme, bg: L.horizon, object: L.object, lead: L.lead };
+    }
     const t = this.theme;
-    this.scene.background = new THREE.Color(t.bg);
+    if (this.scene.background && this.scene.background.isTexture) this.scene.background.dispose();
+    this.scene.background = this.concept ? this.fabric.background() : new THREE.Color(t.bg);
     this.scene.fog = new THREE.Fog(t.bg, 70, 190);
     this.ground.material.color.set(t.ground);
     this.ground.material.userData.uniforms.uBg.value.set(t.bg);
@@ -718,6 +731,9 @@ export class CarScene {
         if (pts.length && (std == null || std < 1.0)) pieces.modelEdge.push(densify(pts.map(([x, y]) => [x + mx, y]), 2));
       });
     }
+    // the Concept style draws the lane lines into its sheet (fabric.js), along the ridges
+    this.ridges = this.concept ? this._ridges(road, ref, keyOf) : [];
+    if (this.concept) for (const k of ['line', 'lineSoft', 'lineYellowSoft', 'lineBlueSoft', 'lineBlue', 'lineYellow', 'lineRed', 'edge']) pieces[k] = [];
     this.ribbons.line.set(pieces.line, 0.14);
     this.ribbons.lineSoft.set(pieces.lineSoft, 0.13);
     this.ribbons.lineYellowSoft.set(pieces.lineYellowSoft, 0.14);
@@ -739,8 +755,8 @@ export class CarScene {
     // the network's plain strips lack) and the fillets as lines; the arm's own lines are the network's
     const armArcs = [];
     for (const arm of jn.arms) armArcs.push(...arm.arcs);
-    this.ribbons.branch.setPairs(jn.arms.map(a => a.strip), -0.003);   // over the network's strips (-0.004), under its lines (-0.002)
-    this.ribbons.branchEdge.set(armArcs, 0.25, 0.012);
+    this.ribbons.branch.setPairs(this.concept ? [] : jn.arms.map(a => a.strip), -0.003);   // over the network's strips (-0.004), under its lines (-0.002)
+    this.ribbons.branchEdge.set(this.concept ? [] : armArcs, 0.25, 0.012);
     this.ribbons.branchCenter.set([], 0.14, 0.012);
     this.ribbons.branchLane.set([], 0.13, 0.012);
 
@@ -806,6 +822,77 @@ export class CarScene {
       }
     }
     return jn;
+  }
+
+  // The Concept style's ridges (fabric.js): one along each lane line, at its offset across the road field's reference
+  // (the cameras' anchor arc, or the map's centerline), with the line glowing on it: the ego lane's two solid, in amber
+  // (blue while steering, red for a departure), the others dimmer and dashed as marked; a broad berm along each edge.
+  _ridges(road, ref, keyOf) {
+    const C = CONCEPT_COLORS, out = [];
+    const tint = (key, ego, inferred) => {
+      if (key === 'lineRed') return C.red;
+      const c = key === 'lineBlue' || key === 'lineBlueSoft' ? C.blue : C.amber;
+      return c.clone().multiplyScalar(ego ? (inferred ? 0.6 : 1) : inferred ? 0.2 : 0.35);
+    };
+    const DASHED = new Set([2, 3, 5, 6]);
+    let edges = 0;
+    if (ref) {
+      if (ref.reveal > 0) {
+        for (const l of ref.structure) {
+          if (l.kind === 'edge') { out.push({ d: l.d, w: 1.6, s: 0.9, color: null }); edges++; continue; }
+          const ego = !!l.ego;
+          const key = ego ? keyOf(l.ego, l.kind === 'center' ? 'yellow' : 'white', false) : 'line';
+          out.push({ d: l.d, w: ego ? 1 : 0.7, s: 0.45, color: tint(key, ego, false), dashed: !ego && l.kind === 'lane' });
+        }
+      }
+    } else if (road && road.surface.reveal > 0.001) {
+      for (const line of road.lines) {
+        if (line.inferred && this.settings.showRoad === false) continue;
+        const d = line.inferred ? line.offset - road.anchor.offset : line.c.y0 - road.anchor.c.y0;
+        if (line.edge) { out.push({ d, w: 1.6, s: 0.9, color: null }); edges++; continue; }
+        const ego = line.id === 'L1' || line.id === 'R1';
+        out.push({ d, w: ego ? 1 : 0.7, s: 0.45, color: tint(keyOf(line.id, line.color, line.inferred), ego, line.inferred),
+          dashed: !ego && DASHED.has(line.type) });
+      }
+    }
+    if (out.length && !edges) {
+      const ds = out.map(r => r.d);
+      out.push({ d: Math.max(...ds) + 1.4, w: 1.4, s: 0.9, color: null }, { d: Math.min(...ds) - 1.4, w: 1.4, s: 0.9, color: null });
+    }
+    // the nearest first, in case there are more than the sheet takes
+    const mid = road && !ref ? -road.anchor.offset : 0;
+    return out.sort((a, b) => Math.abs(a.d - mid) - Math.abs(b.d - mid));
+  }
+
+  // The Concept style, each frame: the sheet instead of the ground and the map's road network (its ridges and lines
+  // are the road), with the cars around us lifting it where they stand.
+  _fabric(dt) {
+    const on = this.concept;
+    this.fabric.mesh.visible = on && this.settings.showGround !== false;
+    if (!on) { for (const b of this.fabric.bars) b.visible = false; return; }
+    this.ground.visible = false;
+    this.roadnet.group.visible = false;
+    this.headBeam.visible = false;   // the concepts light the road with the lines alone
+    const v = Math.max(3, Math.abs(this.vehicle ? this.vehicle.v : 0));
+    const cars = [];
+    const add = (e) => {
+      if (!e.pivot || !e.group || e.alpha <= 0.01 || ['pedestrian', 'bicycle', 'small', 'animal'].includes(e.kind)) return;
+      e.pivot.updateMatrixWorld();
+      const m = e.pivot.matrixWorld.elements;
+      // the model faces its local -Z, as ours does: forward in the car frame (x = -Z, y = -X) is (m[10], m[8])
+      const fl = Math.hypot(m[8], m[10]) || 1;
+      const cos = m[10] / fl, sin = m[8] / fl;
+      const sz = e.size || e.dim || {};
+      const hl = Math.max(1.2, (sz.l || 4.6) / 2), hw = Math.max(0.5, (sz.w || 1.9) / 2), hgt = sz.hgt || 1.5;
+      const x = -m[14], y = -m[12];
+      if (x < -40 || x > 150) return;
+      cars.push({ x, y, cos, sin, hl, hw, hgt, alpha: Math.min(1, e.alpha), ahead: x > 2 && cos > 0.3, lead: !!e.lead,
+        gapS: Math.max(0, x - hl) / v, braking: false });
+    };
+    for (const e of this.objects.values()) add(e);
+    for (const e of this.worldObjs.values()) add(e);
+    cars.sort((a, b) => Math.hypot(a.x, a.y) - Math.hypot(b.x, b.y));
+    this.fabric.update(this.ridges || [], cars, this.odometer, this.clock, dt);
   }
 
   _uss() {
@@ -1478,6 +1565,7 @@ export class CarScene {
     this._worldObjects(dt);
     this._ego(dt);
     this._tracks(dt);
+    this._fabric(dt);
     this.cutaway.update(dt, this.clock);
     this._driveModel();
     this.navArrow.update(toScene, this.clock, this.route.mesh.visible);

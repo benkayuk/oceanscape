@@ -312,6 +312,10 @@ export class Settings {
     const body = this.body;
     body.append(el('div.section', el('h3', 'Theme'),
       this.app.segmented([['auto', 'Auto'], ['light', 'Day'], ['dark', 'Night']], s.theme, v => set('theme', v))));
+    body.append(el('div.section', el('h3', 'Style'),
+      el('p.desc', 'Concept: the road as a sheet of perforated fabric with the lanes as glowing ridges and ripples in front of ' +
+        'the car you follow, after Territory Studio\'s original ADAS concepts for the Ocean. Classic: the flat road and lines.'),
+      this.app.segmented([['concept', 'Concept'], ['classic', 'Classic']], s.style || 'classic', v => set('style', v))));
     body.append(el('div.section', el('h3', 'Speed units'),
       this.app.segmented([['auto', 'Follow cluster'], ['mph', 'mph'], ['kmh', 'km/h']], s.units, v => set('units', v))));
     // the country the car is in sets the side of the road, the sign units and the sign (region.js); each can be

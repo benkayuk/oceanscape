@@ -74,7 +74,7 @@ function noiseTexture(size, cells, octaves, gain, seed, anisotropy) {
 // The field, in GLSL. p: car frame point; g: ground coordinates (m, fixed to the ground) for the noise.
 const POLY_MAX = 64;
 
-const FIELD_GLSL = `
+export const FIELD_GLSL = `
 #define POLY_MAX ${POLY_MAX}
 uniform vec3 uArc;       // the road's reference arc in the car frame: y at the bumper, tan(heading), curvature
 uniform vec2 uPoly[POLY_MAX];   // ...or its reference polyline (car frame), with each point's station
