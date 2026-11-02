@@ -587,3 +587,20 @@ pre.diag:empty { display: none; }
 :root[data-style="concept"] .nc-icon { background: transparent; color: var(--text); width: 44px; height: 44px; }
 :root[data-style="concept"] .nc-dist b { font-weight: 600; }
 :root[data-style="concept"] .nc-what { font-weight: 400; }
+/* the next turn floating over the road (infotainment.js _turnFloat) instead of the card at the top */
+.turnfloat { display: none; }
+:root[data-style="concept"] .navcard { display: none; }
+:root[data-style="concept"] .turnfloat:not(.hidden) {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; position: absolute; left: 0; top: 0; z-index: 4;
+  pointer-events: none; color: var(--text); text-align: center; will-change: transform;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.14); filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.12));
+}
+:root[data-style="concept"][data-theme="dark"] .turnfloat { text-shadow: 0 1px 12px rgba(0, 0, 0, 0.6); filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5)); }
+.tf-icon { width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; }
+.tf-icon svg { width: 60px; height: 60px; }
+.tf-icon img { width: 60px; height: 60px; object-fit: contain; }
+.tf-bar { width: 96px; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--text) 25%, transparent); overflow: hidden; }
+.tf-bar i { display: block; height: 100%; width: 0; background: var(--text); transition: width .3s linear; }
+.tf-what { font-size: 26px; font-weight: 600; letter-spacing: -.3px; white-space: nowrap; }
+.tf-dist { font-size: 15px; color: var(--muted); font-variant-numeric: tabular-nums; margin-top: -4px; }
+:root[data-style="concept"]:not([data-theme="dark"]) .tf-icon img { filter: invert(0.85); }   /* the nav app's white arrow, on a light road */
